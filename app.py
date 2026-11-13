@@ -1,4 +1,4 @@
-import streamlit as st
+ import streamlit as st
 import requests
 import re
 import google.generativeai as genai
@@ -25,7 +25,7 @@ st.markdown("""
     </style>
 """, unsafe_allow_html=True)
 
-st.title("🎬 Comercial 30s AI v3")
+st.title("🎬 Comercial 30s AI v4")
 st.caption("Transforme qualquer link de produto em um anúncio vertical pronto para vender.")
 
 with st.expander("🔑 Configuração Inicial (Chave Gratuita)", expanded=True):
@@ -127,7 +127,7 @@ if st.button("🚀 GERAR COMERCIAL DE 30 SEGUNDOS", use_container_width=True):
 
             with st.spinner("2/4 Criando roteiro persuasivo de 30 segundos..."):
                 genai.configure(api_key=api_key.strip())
-                model = genai.GenerativeModel('gemini-2.5-flash')
+                model = genai.GenerativeModel('gemini-3.8-flash')
                 prompt = f"""
                 Crie um roteiro de locução comercial de EXATAMENTE 30 segundos (entre 68 e 78 palavras) 
                 com foco em: {estilo_texto}.
