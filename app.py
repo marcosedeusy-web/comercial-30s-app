@@ -1,12 +1,9 @@
 import streamlit as st
-import requests
-import re
 import time
 import google.generativeai as genai
 import edge_tts
 import asyncio
 from PIL import Image, ImageOps
-from io import BytesIO
 
 if not hasattr(Image, 'ANTIALIAS'):
     Image.ANTIALIAS = Image.LANCZOS
@@ -29,14 +26,12 @@ st.markdown("""
     </style>
 """, unsafe_allow_html=True)
 
-st.title("🎬 Comercial 30s AI v19")
-st.caption("Suba as fotos ou cole o link do produto para criar seu anúncio vertical.")
+st.title("🎬 Comercial 30s AI v20")
+st.caption("Envie as fotos do produto e gere seu comercial vertical animado.")
 
 api_key = st.secrets.get("GEMINI_API_KEY", "")
 
-url_produto = st.text_input("🔗 Cole o Link do Produto (Opcional):")
 nome_produto = st.text_input("📦 Nome ou Oferta do Produto (Opcional):")
-
 fotos_manuais = st.file_uploader("📸 Suba de 2 a 5 fotos ou prints do produto:", type=["jpg", "jpeg", "png", "webp"], accept_multiple_files=True)
 
 col1, col2 = st.columns(2)
@@ -73,25 +68,6 @@ def preparar_imagem_vertical(img_pil, index):
     fundo.save(caminho, quality=95)
     return caminho
 
-def baixar_imagens_do_link(texto_markdown):
-    urls_imagens = re.findall(r'!\[.*?\]\((https?://[^\s\)]+)\)', texto_markdown)
-    imagens_salvas = []
-    imagens_pil = []
-    headers = {"User-Agent": "Mozilla/5.0"}
-    for i, img_url in enumerate(urls_imagens):
-        if len(imagens_salvas) >= 5:
-            break
-        try:
-            resp = requests.get(img_url, headers=headers, timeout=6)
-            img = Image.open(BytesIO(resp.content)).convert("RGB")
-            if img.width >= 300 and img.height >= 300:
-                caminho = preparar_imagem_vertical(img, i)
-                imagens_salvas.append(caminho)
-                imagens_pil.append(img)
-        except:
-            continue
-    return imagens_salvas, imagens_pil
-
 def gerar_roteiro_com_visao(api_key, prompt, lista_imagens_pil):
     genai.configure(api_key=api_key.strip())
     modelos = ['gemini-3.5-flash-lite', 'gemini-3.8-flash', 'gemini-2.5-flash-lite']
@@ -113,51 +89,26 @@ def gerar_roteiro_com_visao(api_key, prompt, lista_imagens_pil):
 
 if st.button("🔥 GERAR COMERCIAL ANIMADO AGORA", use_container_width=True):
     if not api_key:
-        st.error("⚠️ Falta salvar sua Chave API nos Secrets do Streamlit!")
-    elif not url_produto and not fotos_manuais:
-        st.error("⚠️ Cole o link de um produto ou envie pelo menos uma foto!")
+        st.error("⚠️ Chave API não encontrada nos Secrets do Streamlit.")
+    elif not fotos_manuais:
+        st.warning("⚠️ Toque em Upload e selecione pelo menos 1 foto do produto!")
     else:
         try:
             imagens_finais = []
             imagens_para_ia = []
-            texto_produto = ""
 
-            with st.spinner("1/4 Lendo informações e preparando fotos..."):
-                if url_produto:
-                    link_limpo = url_produto.strip()
-                    if not link_limpo.startswith("http"):
-                        link_limpo = "https://" + link_limpo
-                    try:
-                        r_redir = requests.head(link_limpo, allow_redirects=True, timeout=10)
-                        link_final = r_redir.url
-                    except:
-                        link_final = link_limpo
-                    base_link, _, _ = link_final.partition("?")
-                    link_sem_http = base_link.replace("https://", "").replace("http://", "")
-                    try:
-                        resp = requests.get(f"https://jina.ai{link_sem_http}", timeout=20)
-                        texto_produto = resp.text[:4000]
-                    except:
-                        texto_produto = ""
-
-                if fotos_manuais:
-                    for idx, arquivo in enumerate(fotos_manuais[:5]):
-                        img = Image.open(arquivo).convert("RGB")
-                        imagens_finais.append(preparar_imagem_vertical(img, idx))
-                        imagens_para_ia.append(img)
-                elif url_produto:
-                    imagens_finais, imagens_para_ia = baixar_imagens_do_link(texto_produto)
-
-                if not imagens_finais:
-                    st.warning("🔒 Esse site bloqueou o download automático das fotos. Suba 2 ou 3 prints do produto no botão Upload acima e clique em Gerar novamente!")
-                    st.stop()
+            with st.spinner("1/4 Preparando suas fotos..."):
+                for idx, arquivo in enumerate(fotos_manuais[:5]):
+                    img = Image.open(arquivo).convert("RGB")
+                    imagens_finais.append(preparar_imagem_vertical(img, idx))
+                    imagens_para_ia.append(img)
 
             with st.spinner("2/4 A IA está olhando suas fotos e criando o roteiro..."):
                 prompt = f"""
                 Você é o locutor de comerciais mais animado e persuasivo do Brasil!
                 OLHE PARA AS IMAGENS ENVIADAS, identifique qual é o produto e crie um roteiro de 30 segundos (75 a 85 palavras) vendendo esse produto específico!
                 Use frases curtas, abuse de pontos de exclamação (!) para dar entusiasmo e escreva APENAS o texto falado em português do Brasil, sem títulos, sem asteriscos e sem emojis.
-                Detalhes extras: {nome_produto} | {texto_produto[:1000]}
+                Detalhes extras: {nome_produto}
                 """
                 roteiro = gerar_roteiro_com_visao(api_key, prompt, imagens_para_ia)
                 st.success("✍️ Roteiro Criado:")
