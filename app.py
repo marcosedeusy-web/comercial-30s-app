@@ -30,17 +30,17 @@ st.markdown("""
     </style>
 """, unsafe_allow_html=True)
 
-st.title("🎬 Comercial 30s AI v10")
-st.caption("Anúncios verticais com locução animada prontos para vender.")
+st.title("🎬 Comercial 30s AI v11 (Com Visão)")
+st.caption("A IA enxerga suas fotos, identifica o produto e cria o comercial animado.")
 
 with st.expander("🔑 Configuração Inicial (Chave Gratuita)", expanded=True):
     api_key = st.text_input("Cole sua Chave Gratuita do Google Gemini:", type="password")
 
 url_produto = st.text_input("🔗 Cole o Link do Produto (Shopee, Mercado Livre, etc.):")
-nome_produto = st.text_input("📦 Nome ou Detalhes do Produto (Ex: Fone Bluetooth Gamer à prova d'água):")
+nome_produto = st.text_input("📦 Detalhes Extras (Opcional - a IA já vai ler suas fotos sozinha!):")
 
 fotos_manuais = st.file_uploader(
-    "📸 Suba fotos da galeria (Recomendado para Shopee/Mercado Livre)", 
+    "📸 Suba fotos ou prints do produto (A IA vai analisar as imagens!)", 
     type=["jpg", "jpeg", "png", "webp"], 
     accept_multiple_files=True
 )
@@ -90,7 +90,6 @@ async def gerar_audio(texto, voz, energia, arquivo_saida):
         comunicador = edge_tts.Communicate(texto_para_falar, voz, rate=velocidade)
         await comunicador.save(arquivo_saida)
     except Exception:
-        # Plano de segurança caso o servidor rejeite a velocidade acelerada
         comunicador = edge_tts.Communicate(texto_para_falar, voz)
         await comunicador.save(arquivo_saida)
 
@@ -108,6 +107,7 @@ def preparar_imagem_vertical(img_pil, index):
 def baixar_imagens_do_link(texto_markdown):
     urls_imagens = re.findall(r'!\[.*?\]\((https?://[^\s\)]+)\)', texto_markdown)
     imagens_salvas = []
+    imagens_pil = []
     headers = {"User-Agent": "Mozilla/5.0"}
     for i, img_url in enumerate(urls_imagens):
         if len(imagens_salvas) >= 5:
@@ -118,17 +118,22 @@ def baixar_imagens_do_link(texto_markdown):
             if img.width >= 300 and img.height >= 300:
                 caminho = preparar_imagem_vertical(img, i)
                 imagens_salvas.append(caminho)
+                imagens_pil.append(img)
         except:
             continue
-    return imagens_salvas
+    return imagens_salvas, imagens_pil
 
-def gerar_roteiro_seguro(api_key, prompt):
+def gerar_roteiro_com_visao(api_key, prompt, lista_imagens_pil):
     genai.configure(api_key=api_key.strip())
     modelos = ['gemini-3.5-flash-lite', 'gemini-3.8-flash', 'gemini-2.5-flash-lite']
+    
+    # Monta o pacote com o texto + até 3 imagens para a IA enxergar o produto
+    conteudo_envio = [prompt] + lista_imagens_pil[:3]
+    
     for nome_modelo in modelos:
         try:
             model = genai.GenerativeModel(nome_modelo)
-            return model.generate_content(prompt).text.strip()
+            return model.generate_content(conteudo_envio).text.strip()
         except Exception as e:
             if "429" in str(e):
                 time.sleep(5)
@@ -138,7 +143,7 @@ def gerar_roteiro_seguro(api_key, prompt):
             else:
                 raise e
     model = genai.GenerativeModel('gemini-3.8-flash')
-    return model.generate_content(prompt).text.strip()
+    return model.generate_content(conteudo_envio).text.strip()
 
 if st.button("🔥 GERAR COMERCIAL ANIMADO AGORA", use_container_width=True):
     if not api_key:
@@ -148,6 +153,7 @@ if st.button("🔥 GERAR COMERCIAL ANIMADO AGORA", use_container_width=True):
     else:
         try:
             imagens_finais = []
+            imagens_para_ia = []
             texto_produto = ""
 
             with st.spinner("1/4 Lendo informações e preparando fotos..."):
@@ -175,30 +181,34 @@ if st.button("🔥 GERAR COMERCIAL ANIMADO AGORA", use_container_width=True):
                     for idx, arquivo in enumerate(fotos_manuais[:5]):
                         img = Image.open(arquivo).convert("RGB")
                         imagens_finais.append(preparar_imagem_vertical(img, idx))
+                        imagens_para_ia.append(img)
                 elif url_produto:
-                    imagens_finais = baixar_imagens_do_link(texto_produto)
+                    imagens_finais, imagens_para_ia = baixar_imagens_do_link(texto_produto)
 
                 if not imagens_finais:
                     st.warning("🔒 Esse site bloqueou o download automático das fotos. Suba 2 ou 3 prints do produto no botão logo acima e clique em Gerar novamente!")
                     st.stop()
 
-            with st.spinner("2/4 Criando roteiro de vendas explosivo..."):
-                info_final = f"Nome/Detalhes informados: {nome_produto}. Dados extras do link: {texto_produto}"
+            with st.spinner("2/4 A IA está olhando suas fotos e criando o roteiro..."):
                 prompt = f"""
                 Você é o locutor de comerciais mais animado, enérgico e persuasivo do Brasil!
-                Crie um roteiro de locução comercial de 30 segundos (entre 75 e 85 palavras) para vender o produto abaixo.
-                REGRAS IMPORTANTES PARA A VOZ FICAR EMPOLGADA:
+                OLHE ATENTAMENTE PARA AS IMAGENS ENVIADAS para identificar exatamente qual é o produto, suas características, cores, utilidade e qualquer texto ou preço visível nas fotos.
+                
+                Crie um roteiro de locução comercial de 30 segundos (entre 75 e 85 palavras) vendendo EXATAMENTE o produto que você está vendo nas imagens!
+                
+                REGRAS IMPORTANTES:
+                - Fale o nome real e as qualidades específicas do produto que aparece nas fotos!
                 - Use frases curtas, diretas e impactantes!
                 - Abuse de pontos de exclamação (!) para o locutor falar com entusiasmo e energia!
-                - Comece com um gancho explosivo (Ex: "Para tudo e olha isso!", "Você não vai acreditar nessa oferta!").
-                - Fale especificamente sobre o produto informado, destacando seus benefícios e terminando com uma chamada urgente para clicar no link.
+                - Comece com um gancho explosivo chamando atenção para o problema que esse produto resolve.
+                - Termine com uma chamada urgente para clicar no link da página e garantir o seu.
                 - Escreva APENAS o texto falado em português do Brasil, sem títulos, sem asteriscos e sem emojis.
                 
-                Produto:
-                {info_final}
+                Informações adicionais digitadas pelo usuário: {nome_produto}
+                Dados extras do link (se houver): {texto_produto[:1500]}
                 """
-                roteiro = gerar_roteiro_seguro(api_key, prompt)
-                st.success("✍️ Roteiro de Vendas Criado:")
+                roteiro = gerar_roteiro_com_visao(api_key, prompt, imagens_para_ia)
+                st.success("✍️ Roteiro de Vendas Criado (Baseado nas suas fotos):")
                 st.info(roteiro)
 
             with st.spinner("3/4 Gravando locução com alta energia..."):
@@ -226,13 +236,3 @@ if st.button("🔥 GERAR COMERCIAL ANIMADO AGORA", use_container_width=True):
                 st.download_button(
                     label="📥 SALVAR VÍDEO NA GALERIA",
                     data=file,
-                    file_name="comercial_produto_30s.mp4",
-                    mime="video/mp4",
-                    use_container_width=True
-                )
-
-        except Exception as e:
-            if "429" in str(e):
-                st.warning("⏳ Muitos pedidos seguidos no plano gratuito do Google! Aguarde 35 segundos e clique novamente no botão.")
-            else:
-                st.error(f"Erro ao gerar o vídeo: {e}")
