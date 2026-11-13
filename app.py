@@ -1,7 +1,6 @@
 import streamlit as st
 import streamlit.components.v1 as components
 import requests
-import re
 import time
 import base64
 import google.generativeai as genai
@@ -55,7 +54,6 @@ nome_produto = st.text_input("📦 Nome ou Oferta do Produto (Opcional):")
 
 st.write("📸 **Selecione até 3 Prints/Fotos (Sistema Antibloqueio):**")
 
-# Leitor HTML/JS direto no celular que converte as fotos em texto leve antes de enviar
 html_seletor = """
 <div style="background:#1e1e26; padding:15px; border-radius:12px; border:1px dashed #ff4b2b; text-align:center; font-family:sans-serif; color:white;">
     <label for="imgInput" style="background:#2575fc; color:white; padding:12px 20px; border-radius:8px; font-weight:bold; cursor:pointer; display:inline-block;">
@@ -74,11 +72,9 @@ const preview = document.getElementById('preview');
 input.addEventListener('change', async (e) => {
     const files = Array.from(e.target.files).slice(0, 3);
     if (!files.length) return;
-    
     status.innerText = "Processando " + files.length + " foto(s) no celular...";
     preview.innerHTML = "";
     let resultados = [];
-
     for (let file of files) {
         const b64 = await comprimirImagem(file);
         resultados.push(b64);
@@ -88,11 +84,8 @@ input.addEventListener('change', async (e) => {
         img.style.borderRadius = "6px";
         preview.appendChild(img);
     }
-
     const textoFinal = resultados.join("|||");
     await navigator.clipboard.writeText(textoFinal).catch(() => {});
-    
-    // Envia automaticamente para o campo de texto oculto do Streamlit
     const textareas = window.parent.document.querySelectorAll('textarea');
     for (let ta of textareas) {
         if (ta.getAttribute('aria-label') === 'DADOS_FOTOS_CELULAR') {
@@ -102,7 +95,7 @@ input.addEventListener('change', async (e) => {
             break;
         }
     }
-    status.innerHTML = "✅ <b>" + files.length + " foto(s) carregada(s) com sucesso!</b> Já pode clicar no botão vermelho abaixo.";
+    status.innerHTML = "✅ <b>" + files.length + " foto(s) carregada(s)!</b> Clique no botão vermelho abaixo.";
     status.style.color = "#4ade80";
 });
 
@@ -133,7 +126,7 @@ function comprimirImagem(file) {
 """
 
 components.html(html_seletor, height=210)
-dados_fotos_b64 = st.text_area("DADOS_FOTOS_CELULAR", height=68, label_visibility="collapsed", placeholder="As fotos selecionadas aparecem automaticamente aqui (ou segure e cole aqui)...")
+dados_fotos_b64 = st.text_area("DADOS_FOTOS_CELULAR", height=68, label_visibility="collapsed", placeholder="As fotos aparecem automaticamente aqui (ou segure e cole aqui)...")
 
 col1, col2 = st.columns(2)
 with col1:
@@ -233,7 +226,7 @@ if st.button("🔥 GERAR COMERCIAL ANIMADO AGORA", use_container_width=True):
                             imagens_para_ia.append(img_pil)
 
                 if not imagens_finais:
-                    st.warning("⚠️ Nenhuma imagem carregada. Toque no botão azul 'TOCAR PARA ESCOLHER PRINTS DA GALERIA' e selecione suas fotos.")
+                    st.warning("⚠️ Nenhuma imagem carregada. Toque no botão azul acima e selecione suas fotos.")
                     st.stop()
 
             with st.spinner("2/4 A IA está olhando suas fotos e criando o roteiro..."):
