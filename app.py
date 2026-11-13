@@ -30,8 +30,8 @@ st.markdown("""
     </style>
 """, unsafe_allow_html=True)
 
-st.title("🎬 Comercial 30s AI v23")
-st.caption("Cole o link e suba as fotos do produto para criar seu anúncio vertical.")
+st.title("🎬 Comercial 30s AI v24")
+st.caption("Cole o link e envie os prints do produto para criar seu anúncio vertical.")
 
 chave_cofre = ""
 try:
@@ -51,7 +51,11 @@ else:
 
 url_produto = st.text_input("🔗 Cole o Link do Produto (Shopee, Mercado Livre, etc.):")
 nome_produto = st.text_input("📦 Nome ou Oferta do Produto (Opcional):")
-fotos_manuais = st.file_uploader("📸 Suba de 2 a 5 fotos ou prints do produto:", type=["jpg", "jpeg", "png", "webp"], accept_multiple_files=True)
+
+st.write("📸 **Envie os Prints ou Fotos do Produto (1 em cada botão):**")
+foto_1 = st.file_uploader("Print / Foto 1 (Obrigatória se o link bloquear):", key="f1")
+foto_2 = st.file_uploader("Print / Foto 2 (Opcional):", key="f2")
+foto_3 = st.file_uploader("Print / Foto 3 (Opcional):", key="f3")
 
 col1, col2 = st.columns(2)
 with col1:
@@ -87,7 +91,6 @@ async def gerar_audio(texto, voz, energia, arquivo_saida):
         await comunicador.save(arquivo_saida)
 
 def otimizar_foto_celular(img_pil):
-    # Corrige rotação do celular e reduz prints gigantes para não estourar a memória
     img_corrigida = ImageOps.exif_transpose(img_pil)
     if img_corrigida.mode != "RGB":
         img_corrigida = img_corrigida.convert("RGB")
@@ -144,10 +147,12 @@ def gerar_roteiro_com_visao(api_key, prompt, lista_imagens_pil):
     return model.generate_content(conteudo_envio).text.strip()
 
 if st.button("🔥 GERAR COMERCIAL ANIMADO AGORA", use_container_width=True):
+    fotos_enviadas = [f for f in [foto_1, foto_2, foto_3] if f is not None]
+    
     if not api_key:
         st.error("⚠️ Cole sua Chave API acima ou salve nos Secrets do Streamlit.")
-    elif not fotos_manuais and not url_produto:
-        st.warning("⚠️ Cole o link ou selecione pelo menos 1 foto do produto!")
+    elif not fotos_enviadas and not url_produto:
+        st.warning("⚠️ Cole o link ou envie pelo menos 1 print do produto!")
     else:
         try:
             imagens_finais = []
@@ -172,8 +177,8 @@ if st.button("🔥 GERAR COMERCIAL ANIMADO AGORA", use_container_width=True):
                     except Exception:
                         texto_produto = ""
 
-                if fotos_manuais:
-                    for idx, arquivo in enumerate(fotos_manuais[:5]):
+                if fotos_enviadas:
+                    for idx, arquivo in enumerate(fotos_enviadas):
                         img_bruta = Image.open(arquivo)
                         img_leve = otimizar_foto_celular(img_bruta)
                         imagens_finais.append(preparar_imagem_vertical(img_leve, idx))
@@ -182,7 +187,7 @@ if st.button("🔥 GERAR COMERCIAL ANIMADO AGORA", use_container_width=True):
                     imagens_finais, imagens_para_ia = baixar_imagens_do_link(texto_produto)
 
                 if not imagens_finais:
-                    st.warning("⚠️ Este link não liberou imagens automaticamente. Suba pelo menos 1 foto no botão Upload acima e clique em Gerar novamente.")
+                    st.warning("⚠️ Este link não liberou imagens automaticamente. Envie pelo menos 1 print nos botões acima e clique em Gerar novamente.")
                     st.stop()
 
             with st.spinner("2/4 A IA está olhando suas fotos e criando o roteiro..."):
