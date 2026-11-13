@@ -8,6 +8,11 @@ import asyncio
 import os
 from PIL import Image, ImageOps
 from io import BytesIO
+
+# Correção de compatibilidade do Pillow com MoviePy
+if not hasattr(Image, 'ANTIALIAS'):
+    Image.ANTIALIAS = Image.LANCZOS
+
 from moviepy.editor import ImageClip, AudioFileClip, concatenate_videoclips
 
 st.set_page_config(page_title="Comercial 30s AI", page_icon="🎬", layout="centered")
@@ -26,7 +31,7 @@ st.markdown("""
     </style>
 """, unsafe_allow_html=True)
 
-st.title("🎬 Comercial 30s AI v6")
+st.title("🎬 Comercial 30s AI v7")
 st.caption("Transforme qualquer link de produto em um anúncio vertical pronto para vender.")
 
 with st.expander("🔑 Configuração Inicial (Chave Gratuita)", expanded=True):
