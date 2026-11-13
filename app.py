@@ -1,6 +1,7 @@
 import streamlit as st
 import requests
 import re
+import time
 import google.generativeai as genai
 import edge_tts
 import asyncio
@@ -25,7 +26,7 @@ st.markdown("""
     </style>
 """, unsafe_allow_html=True)
 
-st.title("🎬 Comercial 30s AI v5")
+st.title("🎬 Comercial 30s AI v6")
 st.caption("Transforme qualquer link de produto em um anúncio vertical pronto para vender.")
 
 with st.expander("🔑 Configuração Inicial (Chave Gratuita)", expanded=True):
@@ -84,6 +85,24 @@ def baixar_imagens_do_link(texto_markdown):
             continue
     return imagens_salvas
 
+def gerar_roteiro_seguro(api_key, prompt):
+    genai.configure(api_key=api_key.strip())
+    modelos = ['gemini-3.5-flash-lite', 'gemini-3.8-flash', 'gemini-2.5-flash-lite']
+    for nome_modelo in modelos:
+        try:
+            model = genai.GenerativeModel(nome_modelo)
+            return model.generate_content(prompt).text.strip()
+        except Exception as e:
+            if "429" in str(e):
+                time.sleep(5)
+                continue
+            elif "404" in str(e):
+                continue
+            else:
+                raise e
+    model = genai.GenerativeModel('gemini-3.8-flash')
+    return model.generate_content(prompt).text.strip()
+
 if st.button("🚀 GERAR COMERCIAL DE 30 SEGUNDOS", use_container_width=True):
     if not api_key:
         st.error("⚠️ Por favor, cole sua chave gratuita do Google Gemini acima.")
@@ -127,8 +146,6 @@ if st.button("🚀 GERAR COMERCIAL DE 30 SEGUNDOS", use_container_width=True):
                     st.stop()
 
             with st.spinner("2/4 Criando roteiro persuasivo de 30 segundos..."):
-                genai.configure(api_key=api_key.strip())
-                model = genai.GenerativeModel('gemini-3.8-flash')
                 prompt = f"""
                 Crie um roteiro de locução comercial de EXATAMENTE 30 segundos (entre 68 e 78 palavras) 
                 com foco em: {estilo_texto}.
@@ -138,7 +155,7 @@ if st.button("🚀 GERAR COMERCIAL DE 30 SEGUNDOS", use_container_width=True):
                 Informações do produto:
                 {texto_produto if texto_produto else "Produto incrível em oferta especial mostrado nas imagens."}
                 """
-                roteiro = model.generate_content(prompt).text.strip()
+                roteiro = gerar_roteiro_seguro(api_key, prompt)
                 st.success("✍️ Roteiro de Vendas Criado:")
                 st.info(roteiro)
 
@@ -173,4 +190,7 @@ if st.button("🚀 GERAR COMERCIAL DE 30 SEGUNDOS", use_container_width=True):
                 )
 
         except Exception as e:
-            st.error(f"Erro ao gerar o vídeo: {e}")
+            if "429" in str(e):
+                st.warning("⏳ Muitos pedidos seguidos no plano gratuito do Google! Aguarde 35 segundos e clique novamente no botão.")
+            else:
+                st.error(f"Erro ao gerar o vídeo: {e}")
