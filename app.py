@@ -30,8 +30,8 @@ st.markdown("""
     </style>
 """, unsafe_allow_html=True)
 
-st.title("🎬 Comercial 30s AI v9 (Turbo)")
-st.caption("Anúncios verticais com locução de alta energia prontos para converter.")
+st.title("🎬 Comercial 30s AI v10")
+st.caption("Anúncios verticais com locução animada prontos para vender.")
 
 with st.expander("🔑 Configuração Inicial (Chave Gratuita)", expanded=True):
     api_key = st.text_input("Cole sua Chave Gratuita do Google Gemini:", type="password")
@@ -49,15 +49,13 @@ col1, col2 = st.columns(2)
 with col1:
     voz_escolhida = st.selectbox("🎙️ Voz do Locutor:", [
         "pt-BR-AntonioNeural (Masculina - Varejo)",
-        "pt-BR-FabioNeural (Masculina - Jovem/Dinâmica)",
-        "pt-BR-ThalitaNeural (Feminina - Super Animada)",
-        "pt-BR-FranciscaNeural (Feminina - Firme)"
+        "pt-BR-FranciscaNeural (Feminina - Dinâmica)"
     ])
 with col2:
-    energia_voz = st.selectbox("⚡ Energia da Locução:", [
-        "Super Animado (Estilo TikTok/Oferta)",
-        "Vendedor Empolgado (Ritmo Rápido)",
-        "Apresentador Seguro (Ritmo Moderado)"
+    energia_voz = st.selectbox("⚡ Ritmo da Locução:", [
+        "Super Animado (Ritmo Rápido de Oferta)",
+        "Vendedor Empolgado (Ritmo Ágil)",
+        "Apresentador (Ritmo Normal)"
     ])
 
 def corrigir_pronuncia(texto):
@@ -81,19 +79,20 @@ def corrigir_pronuncia(texto):
 async def gerar_audio(texto, voz, energia, arquivo_saida):
     texto_para_falar = corrigir_pronuncia(texto)
     
-    # Define velocidade e tom para dar emoção e energia real de comercial
     if "Super Animado" in energia:
-        velocidade = "+20%"
-        tom = "+8Hz"
+        velocidade = "+18%"
     elif "Vendedor Empolgado" in energia:
-        velocidade = "+14%"
-        tom = "+4Hz"
+        velocidade = "+12%"
     else:
-        velocidade = "+6%"
-        tom = "+0Hz"
+        velocidade = "+0%"
         
-    comunicador = edge_tts.Communicate(texto_para_falar, voz, rate=velocidade, pitch=tom)
-    await comunicador.save(arquivo_saida)
+    try:
+        comunicador = edge_tts.Communicate(texto_para_falar, voz, rate=velocidade)
+        await comunicador.save(arquivo_saida)
+    except Exception:
+        # Plano de segurança caso o servidor rejeite a velocidade acelerada
+        comunicador = edge_tts.Communicate(texto_para_falar, voz)
+        await comunicador.save(arquivo_saida)
 
 def preparar_imagem_vertical(img_pil, index):
     largura_alvo, altura_alvo = 720, 1280
