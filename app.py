@@ -34,7 +34,7 @@ with st.expander("🔑 Configuração Inicial (Chave Gratuita)", expanded=True):
 url_produto = st.text_input("🔗 Cole o Link do Produto (Shopee, Mercado Livre, etc.):")
 
 fotos_manuais = st.file_uploader(
-    "📸 Plano B: Suba fotos da galeria (Opcional)", 
+    "📸 Plano B: Suba fotos da galeria (Recomendado para Shopee/Mercado Livre)", 
     type=["jpg", "jpeg", "png", "webp"], 
     accept_multiple_files=True
 )
@@ -96,7 +96,18 @@ if st.button("🚀 GERAR COMERCIAL DE 30 SEGUNDOS", use_container_width=True):
 
             with st.spinner("1/4 Lendo informações e preparando fotos..."):
                 if url_produto:
-                    resp = requests.get(f"https://jina.ai{url_produto}", timeout=15)
+                    link_limpo = url_produto.strip()
+                    if not link_limpo.startswith("http"):
+                        link_limpo = "https://" + link_limpo
+                    
+                    try:
+                        r_redir = requests.head(link_limpo, allow_redirects=True, timeout=10)
+                        link_final = r_redir.url
+                    except:
+                        link_final = link_limpo
+
+                    url_leitura = "https://jina.ai" + link_final
+                    resp = requests.get(url_leitura, timeout=20)
                     texto_produto = resp.text[:4000]
                 
                 if fotos_manuais:
@@ -107,11 +118,11 @@ if st.button("🚀 GERAR COMERCIAL DE 30 SEGUNDOS", use_container_width=True):
                     imagens_finais = baixar_imagens_do_link(texto_produto)
 
                 if not imagens_finais:
-                    st.warning("🔒 Esse site bloqueou o download automático das fotos. Use o botão 'Plano B' logo acima com os prints do produto!")
+                    st.warning("🔒 Esse site bloqueou o download automático das fotos. Suba 2 ou 3 prints do produto no botão 'Plano B' logo acima e clique em Gerar novamente!")
                     st.stop()
 
             with st.spinner("2/4 Criando roteiro persuasivo de 30 segundos..."):
-                genai.configure(api_key=api_key)
+                genai.configure(api_key=api_key.strip())
                 model = genai.GenerativeModel('gemini-2.5-flash')
                 prompt = f"""
                 Crie um roteiro de locução comercial de EXATAMENTE 30 segundos (entre 68 e 78 palavras) 
