@@ -25,7 +25,7 @@ st.markdown("""
     </style>
 """, unsafe_allow_html=True)
 
-st.title("🎬 Comercial 30s AI")
+st.title("🎬 Comercial 30s AI v2")
 st.caption("Transforme qualquer link de produto em um anúncio vertical pronto para vender.")
 
 with st.expander("🔑 Configuração Inicial (Chave Gratuita)", expanded=True):
@@ -106,7 +106,9 @@ if st.button("🚀 GERAR COMERCIAL DE 30 SEGUNDOS", use_container_width=True):
                     except:
                         link_final = link_limpo
 
-                    url_leitura = "https://jina.ai" + link_final
+                    # Remove parametros gigantes de afiliado para facilitar a leitura
+                    link_limpo_final = link_final.split("?")[0]
+                    url_leitura = f"https://jina.ai{link_limpo_final}"
                     resp = requests.get(url_leitura, timeout=20)
                     texto_produto = resp.text[:4000]
                 
@@ -118,7 +120,7 @@ if st.button("🚀 GERAR COMERCIAL DE 30 SEGUNDOS", use_container_width=True):
                     imagens_finais = baixar_imagens_do_link(texto_produto)
 
                 if not imagens_finais:
-                    st.warning("🔒 Esse site bloqueou o download automático das fotos. Suba 2 ou 3 prints do produto no botão 'Plano B' logo acima e clique em Gerar novamente!")
+                    st.warning("🔒 A Shopee bloqueou o download automático das fotos. Suba 2 ou 3 prints do produto no botão 'Plano B' logo acima e clique em Gerar novamente!")
                     st.stop()
 
             with st.spinner("2/4 Criando roteiro persuasivo de 30 segundos..."):
