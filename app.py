@@ -25,7 +25,7 @@ st.markdown("""
     </style>
 """, unsafe_allow_html=True)
 
-st.title("🎬 Comercial 30s AI v4")
+st.title("🎬 Comercial 30s AI v5")
 st.caption("Transforme qualquer link de produto em um anúncio vertical pronto para vender.")
 
 with st.expander("🔑 Configuração Inicial (Chave Gratuita)", expanded=True):
@@ -106,13 +106,14 @@ if st.button("🚀 GERAR COMERCIAL DE 30 SEGUNDOS", use_container_width=True):
                     except:
                         link_final = link_limpo
 
-                    link_sem_param = link_final.partition("?").replace("https://", "").replace("http://", "")
+                    base_link, _, _ = link_final.partition("?")
+                    link_sem_http = base_link.replace("https://", "").replace("http://", "")
                     
                     try:
-                        resp = requests.get(f"https://jina.ai{link_sem_param}", timeout=20)
+                        resp = requests.get(f"https://jina.ai{link_sem_http}", timeout=20)
                         texto_produto = resp.text[:4000]
                     except:
-                        texto_produto = f"Produto da loja {link_sem_param}"
+                        texto_produto = f"Produto da loja {link_sem_http}"
                 
                 if fotos_manuais:
                     for idx, arquivo in enumerate(fotos_manuais[:5]):
@@ -142,7 +143,7 @@ if st.button("🚀 GERAR COMERCIAL DE 30 SEGUNDOS", use_container_width=True):
                 st.info(roteiro)
 
             with st.spinner("3/4 Gravando locução comercial..."):
-                voz_id = voz_escolhida.partition(" ")
+                voz_id, _, _ = voz_escolhida.partition(" ")
                 asyncio.run(gerar_audio(roteiro, voz_id, "locucao.mp3"))
 
             with st.spinner("4/4 Renderizando vídeo MP4 para celular..."):
