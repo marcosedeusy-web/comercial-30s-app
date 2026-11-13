@@ -126,8 +126,6 @@ def baixar_imagens_do_link(texto_markdown):
 def gerar_roteiro_com_visao(api_key, prompt, lista_imagens_pil):
     genai.configure(api_key=api_key.strip())
     modelos = ['gemini-3.5-flash-lite', 'gemini-3.8-flash', 'gemini-2.5-flash-lite']
-    
-    # Monta o pacote com o texto + até 3 imagens para a IA enxergar o produto
     conteudo_envio = [prompt] + lista_imagens_pil[:3]
     
     for nome_modelo in modelos:
@@ -233,6 +231,6 @@ if st.button("🔥 GERAR COMERCIAL ANIMADO AGORA", use_container_width=True):
             st.video("comercial_30s.mp4")
             
             with open("comercial_30s.mp4", "rb") as file:
-                st.download_button(
-                    label="📥 SALVAR VÍDEO NA GALERIA",
-                    data=file,
+                st.download_button(label="📥 SALVAR VÍDEO NA GALERIA", data=file, file_name="comercial_produto_30s.mp4", mime="video/mp4", use_container_width=True)
+
+        except Exception as e:
