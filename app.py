@@ -1,8 +1,9 @@
 import streamlit as st
+import streamlit.components.v1 as components
 import requests
 import re
 import time
-import os
+import base64
 import google.generativeai as genai
 import edge_tts
 import asyncio
@@ -30,8 +31,8 @@ st.markdown("""
     </style>
 """, unsafe_allow_html=True)
 
-st.title("🎬 Comercial 30s AI v24")
-st.caption("Cole o link e envie os prints do produto para criar seu anúncio vertical.")
+st.title("🎬 Comercial 30s AI v25")
+st.caption("Sistema antibloqueio para celular: escolha as fotos e gere seu vídeo.")
 
 chave_cofre = ""
 try:
@@ -49,13 +50,90 @@ else:
     with st.expander("🔑 Chave API do Google Gemini", expanded=True):
         api_key = st.text_input("Cole sua Chave API:", type="password")
 
-url_produto = st.text_input("🔗 Cole o Link do Produto (Shopee, Mercado Livre, etc.):")
+url_produto = st.text_input("🔗 Cole o Link do Produto (Opcional):")
 nome_produto = st.text_input("📦 Nome ou Oferta do Produto (Opcional):")
 
-st.write("📸 **Envie os Prints ou Fotos do Produto (1 em cada botão):**")
-foto_1 = st.file_uploader("Print / Foto 1 (Obrigatória se o link bloquear):", key="f1")
-foto_2 = st.file_uploader("Print / Foto 2 (Opcional):", key="f2")
-foto_3 = st.file_uploader("Print / Foto 3 (Opcional):", key="f3")
+st.write("📸 **Selecione até 3 Prints/Fotos (Sistema Antibloqueio):**")
+
+# Leitor HTML/JS direto no celular que converte as fotos em texto leve antes de enviar
+html_seletor = """
+<div style="background:#1e1e26; padding:15px; border-radius:12px; border:1px dashed #ff4b2b; text-align:center; font-family:sans-serif; color:white;">
+    <label for="imgInput" style="background:#2575fc; color:white; padding:12px 20px; border-radius:8px; font-weight:bold; cursor:pointer; display:inline-block;">
+        📂 TOCAR PARA ESCOLHER PRINTS DA GALERIA
+    </label>
+    <input type="file" id="imgInput" accept="image/*" multiple style="display:none;" />
+    <p id="status" style="margin-top:10px; font-size:14px; color:#ccc;">Nenhuma foto selecionada ainda.</p>
+    <div id="preview" style="display:flex; gap:8px; justify-content:center; margin-top:10px; flex-wrap:wrap;"></div>
+</div>
+
+<script>
+const input = document.getElementById('imgInput');
+const status = document.getElementById('status');
+const preview = document.getElementById('preview');
+
+input.addEventListener('change', async (e) => {
+    const files = Array.from(e.target.files).slice(0, 3);
+    if (!files.length) return;
+    
+    status.innerText = "Processando " + files.length + " foto(s) no celular...";
+    preview.innerHTML = "";
+    let resultados = [];
+
+    for (let file of files) {
+        const b64 = await comprimirImagem(file);
+        resultados.push(b64);
+        const img = document.createElement('img');
+        img.src = b64;
+        img.style.height = "70px";
+        img.style.borderRadius = "6px";
+        preview.appendChild(img);
+    }
+
+    const textoFinal = resultados.join("|||");
+    await navigator.clipboard.writeText(textoFinal).catch(() => {});
+    
+    // Envia automaticamente para o campo de texto oculto do Streamlit
+    const textareas = window.parent.document.querySelectorAll('textarea');
+    for (let ta of textareas) {
+        if (ta.getAttribute('aria-label') === 'DADOS_FOTOS_CELULAR') {
+            const nativeSetter = Object.getOwnPropertyDescriptor(window.HTMLTextAreaElement.prototype, "value").set;
+            nativeSetter.call(ta, textoFinal);
+            ta.dispatchEvent(new Event('input', { bubbles: true }));
+            break;
+        }
+    }
+    status.innerHTML = "✅ <b>" + files.length + " foto(s) carregada(s) com sucesso!</b> Já pode clicar no botão vermelho abaixo.";
+    status.style.color = "#4ade80";
+});
+
+function comprimirImagem(file) {
+    return new Promise((resolve) => {
+        const reader = new FileReader();
+        reader.onload = (event) => {
+            const img = new Image();
+            img.onload = () => {
+                const canvas = document.createElement('canvas');
+                const maxDim = 800;
+                let w = img.width;
+                let h = img.height;
+                if (w > h && w > maxDim) { h *= maxDim / w; w = maxDim; }
+                else if (h > maxDim) { w *= maxDim / h; h = maxDim; }
+                canvas.width = w;
+                canvas.height = h;
+                const ctx = canvas.getContext('2d');
+                ctx.drawImage(img, 0, 0, w, h);
+                resolve(canvas.toDataURL('image/jpeg', 0.8));
+            };
+            img.src = event.target.result;
+        };
+        reader.readAsDataURL(file);
+    });
+}
+</script>
+"""
+
+components.html(html_seletor, height=210)
+dados_fotos_b64 = st.text_area("DADOS_FOTOS_CELULAR", height=68, label_visibility="collapsed", placeholder="As fotos selecionadas aparecem automaticamente aqui (ou segure e cole aqui)...")
 
 col1, col2 = st.columns(2)
 with col1:
@@ -65,15 +143,10 @@ with col2:
 
 def corrigir_pronuncia(texto):
     ajustes = {
-        "Shopee": "Chopi",
-        "shopee": "Chopi",
-        "SHOPEE": "Chopi",
-        "TikTok": "Tique Toque",
-        "tiktok": "Tique Toque",
-        "Bluetooth": "Blutúfi",
-        "bluetooth": "blutúfi",
-        "Smartwatch": "Ismárt Uótchi",
-        "smartwatch": "ismárt uótchi"
+        "Shopee": "Chopi", "shopee": "Chopi", "SHOPEE": "Chopi",
+        "TikTok": "Tique Toque", "tiktok": "Tique Toque",
+        "Bluetooth": "Blutúfi", "bluetooth": "blutúfi",
+        "Smartwatch": "Ismárt Uótchi", "smartwatch": "ismárt uótchi"
     }
     texto_falado = texto
     for palavra, pronuncia in ajustes.items():
@@ -90,13 +163,6 @@ async def gerar_audio(texto, voz, energia, arquivo_saida):
         comunicador = edge_tts.Communicate(texto_para_falar, voz)
         await comunicador.save(arquivo_saida)
 
-def otimizar_foto_celular(img_pil):
-    img_corrigida = ImageOps.exif_transpose(img_pil)
-    if img_corrigida.mode != "RGB":
-        img_corrigida = img_corrigida.convert("RGB")
-    img_corrigida.thumbnail((1080, 1080))
-    return img_corrigida
-
 def preparar_imagem_vertical(img_pil, index):
     largura_alvo, altura_alvo = 720, 1280
     fundo = Image.new("RGB", (largura_alvo, altura_alvo), (18, 18, 24))
@@ -107,25 +173,6 @@ def preparar_imagem_vertical(img_pil, index):
     caminho = f"frame_{index}.jpg"
     fundo.save(caminho, quality=90)
     return caminho
-
-def baixar_imagens_do_link(texto_markdown):
-    urls_imagens = re.findall(r'!\[.*?\]\((https?://[^\s\)]+)\)', texto_markdown)
-    imagens_salvas = []
-    imagens_pil = []
-    headers = {"User-Agent": "Mozilla/5.0"}
-    for i, img_url in enumerate(urls_imagens):
-        if len(imagens_salvas) >= 5:
-            break
-        try:
-            resp = requests.get(img_url, headers=headers, timeout=6)
-            img = otimizar_foto_celular(Image.open(BytesIO(resp.content)))
-            if img.width >= 250 and img.height >= 250:
-                caminho = preparar_imagem_vertical(img, i)
-                imagens_salvas.append(caminho)
-                imagens_pil.append(img)
-        except Exception:
-            continue
-    return imagens_salvas, imagens_pil
 
 def gerar_roteiro_com_visao(api_key, prompt, lista_imagens_pil):
     genai.configure(api_key=api_key.strip())
@@ -147,19 +194,17 @@ def gerar_roteiro_com_visao(api_key, prompt, lista_imagens_pil):
     return model.generate_content(conteudo_envio).text.strip()
 
 if st.button("🔥 GERAR COMERCIAL ANIMADO AGORA", use_container_width=True):
-    fotos_enviadas = [f for f in [foto_1, foto_2, foto_3] if f is not None]
-    
     if not api_key:
-        st.error("⚠️ Cole sua Chave API acima ou salve nos Secrets do Streamlit.")
-    elif not fotos_enviadas and not url_produto:
-        st.warning("⚠️ Cole o link ou envie pelo menos 1 print do produto!")
+        st.error("⚠️ Chave API não encontrada nos Secrets do Streamlit.")
+    elif not dados_fotos_b64.strip() and not url_produto:
+        st.warning("⚠️ Toque no botão azul acima para escolher os prints ou cole o link!")
     else:
         try:
             imagens_finais = []
             imagens_para_ia = []
             texto_produto = ""
 
-            with st.spinner("1/4 Lendo informações e preparando fotos..."):
+            with st.spinner("1/4 Preparando fotos e lendo informações..."):
                 if url_produto:
                     link_limpo = url_produto.strip()
                     if not link_limpo.startswith("http"):
@@ -172,61 +217,23 @@ if st.button("🔥 GERAR COMERCIAL ANIMADO AGORA", use_container_width=True):
                     base_link, _, _ = link_final.partition("?")
                     link_sem_http = base_link.replace("https://", "").replace("http://", "")
                     try:
-                        resp = requests.get(f"https://jina.ai{link_sem_http}", timeout=12)
+                        resp = requests.get(f"https://jina.ai{link_sem_http}", timeout=10)
                         texto_produto = resp.text[:3000]
                     except Exception:
                         texto_produto = ""
 
-                if fotos_enviadas:
-                    for idx, arquivo in enumerate(fotos_enviadas):
-                        img_bruta = Image.open(arquivo)
-                        img_leve = otimizar_foto_celular(img_bruta)
-                        imagens_finais.append(preparar_imagem_vertical(img_leve, idx))
-                        imagens_para_ia.append(img_leve)
-                elif url_produto:
-                    imagens_finais, imagens_para_ia = baixar_imagens_do_link(texto_produto)
+                if "data:image" in dados_fotos_b64:
+                    pedacos = dados_fotos_b64.strip().split("|||")
+                    for idx, pedaco in enumerate(pedacos[:3]):
+                        if "," in pedaco:
+                            _, b64_limpo = pedaco.split(",", 1)
+                            img_bytes = base64.b64decode(b64_limpo)
+                            img_pil = Image.open(BytesIO(img_bytes)).convert("RGB")
+                            imagens_finais.append(preparar_imagem_vertical(img_pil, idx))
+                            imagens_para_ia.append(img_pil)
 
                 if not imagens_finais:
-                    st.warning("⚠️ Este link não liberou imagens automaticamente. Envie pelo menos 1 print nos botões acima e clique em Gerar novamente.")
+                    st.warning("⚠️ Nenhuma imagem carregada. Toque no botão azul 'TOCAR PARA ESCOLHER PRINTS DA GALERIA' e selecione suas fotos.")
                     st.stop()
 
             with st.spinner("2/4 A IA está olhando suas fotos e criando o roteiro..."):
-                prompt = f"""
-                Você é o locutor de comerciais mais animado e persuasivo do Brasil!
-                OLHE PARA AS IMAGENS ENVIADAS, identifique qual é o produto e crie um roteiro de 30 segundos (75 a 85 palavras) vendendo esse produto específico!
-                Use frases curtas, abuse de pontos de exclamação (!) para dar entusiasmo e escreva APENAS o texto falado em português do Brasil, sem títulos, sem asteriscos e sem emojis.
-                Link e detalhes: {url_produto} | {nome_produto} | {texto_produto[:800]}
-                """
-                roteiro = gerar_roteiro_com_visao(api_key, prompt, imagens_para_ia)
-                st.success("✍️ Roteiro Criado:")
-                st.info(roteiro)
-
-            with st.spinner("3/4 Gravando locução animada..."):
-                voz_id, _, _ = voz_escolhida.partition(" ")
-                asyncio.run(gerar_audio(roteiro, voz_id, energia_voz, "locucao.mp3"))
-
-            with st.spinner("4/4 Renderizando vídeo MP4..."):
-                audio = AudioFileClip("locucao.mp3")
-                duracao_por_foto = audio.duration / len(imagens_finais)
-                clipes = []
-                for img_path in imagens_finais:
-                    clipe = ImageClip(img_path).set_duration(duracao_por_foto)
-                    clipe = clipe.resize(lambda t: 1 + 0.05 * (t / duracao_por_foto))
-                    clipes.append(clipe)
-                video_final = concatenate_videoclips(clipes, method="compose").set_audio(audio)
-                video_final.write_videofile("comercial_30s.mp4", fps=24, codec="libx264", audio_codec="aac", logger=None)
-                audio.close()
-                video_final.close()
-
-            st.balloons()
-            st.success("✅ Comercial Pronto!")
-            st.video("comercial_30s.mp4")
-
-            with open("comercial_30s.mp4", "rb") as f:
-                video_bytes = f.read()
-            st.download_button("📥 SALVAR VÍDEO NA GALERIA", video_bytes, "comercial_30s.mp4", "video/mp4")
-
-        except Exception as e:
-            st.error(f"Erro ao gerar o vídeo: {e}")
-
-# FIM
