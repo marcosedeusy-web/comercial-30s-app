@@ -30,47 +30,25 @@ st.markdown("""
     </style>
 """, unsafe_allow_html=True)
 
-st.title("🎬 Comercial 30s AI v11 (Com Visão)")
+st.title("🎬 Comercial 30s AI v12")
 st.caption("A IA enxerga suas fotos, identifica o produto e cria o comercial animado.")
 
 with st.expander("🔑 Configuração Inicial (Chave Gratuita)", expanded=True):
     api_key = st.text_input("Cole sua Chave Gratuita do Google Gemini:", type="password")
 
 url_produto = st.text_input("🔗 Cole o Link do Produto (Shopee, Mercado Livre, etc.):")
-nome_produto = st.text_input("📦 Detalhes Extras (Opcional - a IA já vai ler suas fotos sozinha!):")
+nome_produto = st.text_input("📦 Detalhes Extras (Opcional):")
 
-fotos_manuais = st.file_uploader(
-    "📸 Suba fotos ou prints do produto (A IA vai analisar as imagens!)", 
-    type=["jpg", "jpeg", "png", "webp"], 
-    accept_multiple_files=True
-)
+fotos_manuais = st.file_uploader("📸 Suba fotos ou prints do produto:", type=["jpg", "jpeg", "png", "webp"], accept_multiple_files=True)
 
 col1, col2 = st.columns(2)
 with col1:
-    voz_escolhida = st.selectbox("🎙️ Voz do Locutor:", [
-        "pt-BR-AntonioNeural (Masculina - Varejo)",
-        "pt-BR-FranciscaNeural (Feminina - Dinâmica)"
-    ])
+    voz_escolhida = st.selectbox("🎙️ Voz do Locutor:", ["pt-BR-AntonioNeural (Masculina)", "pt-BR-FranciscaNeural (Feminina)"])
 with col2:
-    energia_voz = st.selectbox("⚡ Ritmo da Locução:", [
-        "Super Animado (Ritmo Rápido de Oferta)",
-        "Vendedor Empolgado (Ritmo Ágil)",
-        "Apresentador (Ritmo Normal)"
-    ])
+    energia_voz = st.selectbox("⚡ Ritmo da Locução:", ["Super Animado (Ritmo Rápido)", "Vendedor Empolgado (Ritmo Ágil)", "Apresentador (Ritmo Normal)"])
 
 def corrigir_pronuncia(texto):
-    ajustes = {
-        "Shopee": "Chopi",
-        "shopee": "Chopi",
-        "SHOPEE": "Chopi",
-        "TikTok": "Tique Toque",
-        "tiktok": "Tique Toque",
-        "Smartwatch": "Ismárt Uótchi",
-        "smartwatch": "ismárt uótchi",
-        "Bluetooth": "Blutúfi",
-        "bluetooth": "blutúfi",
-        "Free": "Grátis"
-    }
+    ajustes = {"Shopee": "Chopi", "shopee": "Chopi", "SHOPEE": "Chopi", "TikTok": "Tique Toque", "tiktok": "Tique Toque", "Bluetooth": "Blutúfi", "bluetooth": "blutúfi"}
     texto_falado = texto
     for palavra, pronuncia in ajustes.items():
         texto_falado = texto_falado.replace(palavra, pronuncia)
@@ -78,14 +56,7 @@ def corrigir_pronuncia(texto):
 
 async def gerar_audio(texto, voz, energia, arquivo_saida):
     texto_para_falar = corrigir_pronuncia(texto)
-    
-    if "Super Animado" in energia:
-        velocidade = "+18%"
-    elif "Vendedor Empolgado" in energia:
-        velocidade = "+12%"
-    else:
-        velocidade = "+0%"
-        
+    velocidade = "+18%" if "Super Animado" in energia else ("+12%" if "Vendedor" in energia else "+0%")
     try:
         comunicador = edge_tts.Communicate(texto_para_falar, voz, rate=velocidade)
         await comunicador.save(arquivo_saida)
@@ -127,7 +98,6 @@ def gerar_roteiro_com_visao(api_key, prompt, lista_imagens_pil):
     genai.configure(api_key=api_key.strip())
     modelos = ['gemini-3.5-flash-lite', 'gemini-3.8-flash', 'gemini-2.5-flash-lite']
     conteudo_envio = [prompt] + lista_imagens_pil[:3]
-    
     for nome_modelo in modelos:
         try:
             model = genai.GenerativeModel(nome_modelo)
@@ -145,7 +115,7 @@ def gerar_roteiro_com_visao(api_key, prompt, lista_imagens_pil):
 
 if st.button("🔥 GERAR COMERCIAL ANIMADO AGORA", use_container_width=True):
     if not api_key:
-        st.error("⚠️ Por favor, cole sua chave gratuita do Google Gemini acima.")
+        st.error("⚠️ Cole sua chave gratuita do Google Gemini acima.")
     elif not url_produto and not fotos_manuais:
         st.error("⚠️ Cole o link de um produto ou envie pelo menos uma foto!")
     else:
@@ -159,22 +129,19 @@ if st.button("🔥 GERAR COMERCIAL ANIMADO AGORA", use_container_width=True):
                     link_limpo = url_produto.strip()
                     if not link_limpo.startswith("http"):
                         link_limpo = "https://" + link_limpo
-                    
                     try:
                         r_redir = requests.head(link_limpo, allow_redirects=True, timeout=10)
                         link_final = r_redir.url
                     except:
                         link_final = link_limpo
-
                     base_link, _, _ = link_final.partition("?")
                     link_sem_http = base_link.replace("https://", "").replace("http://", "")
-                    
                     try:
                         resp = requests.get(f"https://jina.ai{link_sem_http}", timeout=20)
                         texto_produto = resp.text[:4000]
                     except:
                         texto_produto = ""
-                
+
                 if fotos_manuais:
                     for idx, arquivo in enumerate(fotos_manuais[:5]):
                         img = Image.open(arquivo).convert("RGB")
@@ -184,53 +151,43 @@ if st.button("🔥 GERAR COMERCIAL ANIMADO AGORA", use_container_width=True):
                     imagens_finais, imagens_para_ia = baixar_imagens_do_link(texto_produto)
 
                 if not imagens_finais:
-                    st.warning("🔒 Esse site bloqueou o download automático das fotos. Suba 2 ou 3 prints do produto no botão logo acima e clique em Gerar novamente!")
+                    st.warning("🔒 Esse site bloqueou as fotos. Suba 2 ou 3 prints do produto acima e clique em Gerar novamente!")
                     st.stop()
 
             with st.spinner("2/4 A IA está olhando suas fotos e criando o roteiro..."):
                 prompt = f"""
-                Você é o locutor de comerciais mais animado, enérgico e persuasivo do Brasil!
-                OLHE ATENTAMENTE PARA AS IMAGENS ENVIADAS para identificar exatamente qual é o produto, suas características, cores, utilidade e qualquer texto ou preço visível nas fotos.
-                
-                Crie um roteiro de locução comercial de 30 segundos (entre 75 e 85 palavras) vendendo EXATAMENTE o produto que você está vendo nas imagens!
-                
-                REGRAS IMPORTANTES:
-                - Fale o nome real e as qualidades específicas do produto que aparece nas fotos!
-                - Use frases curtas, diretas e impactantes!
-                - Abuse de pontos de exclamação (!) para o locutor falar com entusiasmo e energia!
-                - Comece com um gancho explosivo chamando atenção para o problema que esse produto resolve.
-                - Termine com uma chamada urgente para clicar no link da página e garantir o seu.
-                - Escreva APENAS o texto falado em português do Brasil, sem títulos, sem asteriscos e sem emojis.
-                
-                Informações adicionais digitadas pelo usuário: {nome_produto}
-                Dados extras do link (se houver): {texto_produto[:1500]}
+                Você é o locutor de comerciais mais animado e persuasivo do Brasil!
+                OLHE PARA AS IMAGENS ENVIADAS, identifique qual é o produto e crie um roteiro de 30 segundos (75 a 85 palavras) vendendo esse produto específico!
+                Use frases curtas, abuse de pontos de exclamação (!) para dar entusiasmo e escreva APENAS o texto falado em português do Brasil, sem títulos, sem asteriscos e sem emojis.
+                Detalhes extras: {nome_produto} | {texto_produto[:1000]}
                 """
                 roteiro = gerar_roteiro_com_visao(api_key, prompt, imagens_para_ia)
-                st.success("✍️ Roteiro de Vendas Criado (Baseado nas suas fotos):")
+                st.success("✍️ Roteiro Criado:")
                 st.info(roteiro)
 
-            with st.spinner("3/4 Gravando locução com alta energia..."):
+            with st.spinner("3/4 Gravando locução animada..."):
                 voz_id, _, _ = voz_escolhida.partition(" ")
                 asyncio.run(gerar_audio(roteiro, voz_id, energia_voz, "locucao.mp3"))
 
-            with st.spinner("4/4 Renderizando vídeo MP4 para celular..."):
+            with st.spinner("4/4 Renderizando vídeo MP4..."):
                 audio = AudioFileClip("locucao.mp3")
                 duracao_por_foto = audio.duration / len(imagens_finais)
-                
                 clipes = []
                 for img_path in imagens_finais:
                     clipe = ImageClip(img_path).set_duration(duracao_por_foto)
                     clipe = clipe.resize(lambda t: 1 + 0.05 * (t / duracao_por_foto))
                     clipes.append(clipe)
-                
                 video_final = concatenate_videoclips(clipes, method="compose").set_audio(audio)
                 video_final.write_videofile("comercial_30s.mp4", fps=24, codec="libx264", audio_codec="aac", logger=None)
 
             st.balloons()
-            st.success("✅ Comercial Pronto! Assista e baixe abaixo:")
+            st.success("✅ Comercial Pronto!")
             st.video("comercial_30s.mp4")
-            
-            with open("comercial_30s.mp4", "rb") as file:
-                st.download_button(label="📥 SALVAR VÍDEO NA GALERIA", data=file, file_name="comercial_produto_30s.mp4", mime="video/mp4", use_container_width=True)
+
+            video_bytes = open("comercial_30s.mp4", "rb").read()
+            st.download_button("📥 SALVAR VÍDEO NA GALERIA", video_bytes, "comercial_30s.mp4", "video/mp4")
 
         except Exception as e:
+            st.error(f"Erro ao gerar o vídeo: {e}")
+
+# FIM
