@@ -16,21 +16,9 @@ from moviepy.editor import ImageClip, AudioFileClip, concatenate_videoclips
 
 st.set_page_config(page_title="Comercial 30s AI", page_icon="🎬", layout="centered")
 
-st.markdown("""
-    <style>
-    .stButton>button {
-        background: linear-gradient(90deg, #ff416c 0%, #ff4b2b 100%);
-        color: white;
-        font-weight: bold;
-        border-radius: 12px;
-        height: 55px;
-        font-size: 18px;
-        border: none;
-    }
-    </style>
-""", unsafe_allow_html=True)
+st.markdown("<style>.stButton>button { background: linear-gradient(90deg, #ff416c 0%, #ff4b2b 100%); color: white; font-weight: bold; border-radius: 12px; height: 55px; font-size: 18px; border: none; }</style>", unsafe_allow_html=True)
 
-st.title("🎬 Comercial 30s AI v25")
+st.title("🎬 Comercial 30s AI v26")
 st.caption("Sistema antibloqueio para celular: escolha as fotos e gere seu vídeo.")
 
 chave_cofre = ""
@@ -54,7 +42,7 @@ nome_produto = st.text_input("📦 Nome ou Oferta do Produto (Opcional):")
 
 st.write("📸 **Selecione até 3 Prints/Fotos (Sistema Antibloqueio):**")
 
-html_seletor = """
+html_seletor = '''
 <div style="background:#1e1e26; padding:15px; border-radius:12px; border:1px dashed #ff4b2b; text-align:center; font-family:sans-serif; color:white;">
     <label for="imgInput" style="background:#2575fc; color:white; padding:12px 20px; border-radius:8px; font-weight:bold; cursor:pointer; display:inline-block;">
         📂 TOCAR PARA ESCOLHER PRINTS DA GALERIA
@@ -63,16 +51,14 @@ html_seletor = """
     <p id="status" style="margin-top:10px; font-size:14px; color:#ccc;">Nenhuma foto selecionada ainda.</p>
     <div id="preview" style="display:flex; gap:8px; justify-content:center; margin-top:10px; flex-wrap:wrap;"></div>
 </div>
-
 <script>
 const input = document.getElementById('imgInput');
 const status = document.getElementById('status');
 const preview = document.getElementById('preview');
-
 input.addEventListener('change', async (e) => {
     const files = Array.from(e.target.files).slice(0, 3);
     if (!files.length) return;
-    status.innerText = "Processando " + files.length + " foto(s) no celular...";
+    status.innerText = "Processando " + files.length + " foto(s)...";
     preview.innerHTML = "";
     let resultados = [];
     for (let file of files) {
@@ -98,7 +84,6 @@ input.addEventListener('change', async (e) => {
     status.innerHTML = "✅ <b>" + files.length + " foto(s) carregada(s)!</b> Clique no botão vermelho abaixo.";
     status.style.color = "#4ade80";
 });
-
 function comprimirImagem(file) {
     return new Promise((resolve) => {
         const reader = new FileReader();
@@ -123,7 +108,7 @@ function comprimirImagem(file) {
     });
 }
 </script>
-"""
+'''
 
 components.html(html_seletor, height=210)
 dados_fotos_b64 = st.text_area("DADOS_FOTOS_CELULAR", height=68, label_visibility="collapsed", placeholder="As fotos aparecem automaticamente aqui (ou segure e cole aqui)...")
@@ -135,12 +120,7 @@ with col2:
     energia_voz = st.selectbox("⚡ Ritmo da Locução:", ["Super Animado (Ritmo Rápido)", "Vendedor Empolgado (Ritmo Ágil)", "Apresentador (Ritmo Normal)"])
 
 def corrigir_pronuncia(texto):
-    ajustes = {
-        "Shopee": "Chopi", "shopee": "Chopi", "SHOPEE": "Chopi",
-        "TikTok": "Tique Toque", "tiktok": "Tique Toque",
-        "Bluetooth": "Blutúfi", "bluetooth": "blutúfi",
-        "Smartwatch": "Ismárt Uótchi", "smartwatch": "ismárt uótchi"
-    }
+    ajustes = {"Shopee": "Chopi", "shopee": "Chopi", "SHOPEE": "Chopi", "TikTok": "Tique Toque", "tiktok": "Tique Toque", "Bluetooth": "Blutúfi", "bluetooth": "blutúfi", "Smartwatch": "Ismárt Uótchi", "smartwatch": "ismárt uótchi"}
     texto_falado = texto
     for palavra, pronuncia in ajustes.items():
         texto_falado = texto_falado.replace(palavra, pronuncia)
@@ -196,37 +176,39 @@ if st.button("🔥 GERAR COMERCIAL ANIMADO AGORA", use_container_width=True):
             imagens_finais = []
             imagens_para_ia = []
             texto_produto = ""
+            aviso_status = st.empty()
 
-            with st.spinner("1/4 Preparando fotos e lendo informações..."):
-                if url_produto:
-                    link_limpo = url_produto.strip()
-                    if not link_limpo.startswith("http"):
-                        link_limpo = "https://" + link_limpo
-                    try:
-                        r_redir = requests.head(link_limpo, allow_redirects=True, timeout=8)
-                        link_final = r_redir.url
-                    except Exception:
-                        link_final = link_limpo
-                    base_link, _, _ = link_final.partition("?")
-                    link_sem_http = base_link.replace("https://", "").replace("http://", "")
-                    try:
-                        resp = requests.get(f"https://jina.ai{link_sem_http}", timeout=10)
-                        texto_produto = resp.text[:3000]
-                    except Exception:
-                        texto_produto = ""
+            aviso_status.info("⏳ 1/4 Preparando fotos e lendo informações...")
+            if url_produto:
+                link_limpo = url_produto.strip()
+                if not link_limpo.startswith("http"):
+                    link_limpo = "https://" + link_limpo
+                try:
+                    r_redir = requests.head(link_limpo, allow_redirects=True, timeout=8)
+                    link_final = r_redir.url
+                except Exception:
+                    link_final = link_limpo
+                base_link, _, _ = link_final.partition("?")
+                link_sem_http = base_link.replace("https://", "").replace("http://", "")
+                try:
+                    resp = requests.get(f"https://jina.ai{link_sem_http}", timeout=10)
+                    texto_produto = resp.text[:3000]
+                except Exception:
+                    texto_produto = ""
 
-                if "data:image" in dados_fotos_b64:
-                    pedacos = dados_fotos_b64.strip().split("|||")
-                    for idx, pedaco in enumerate(pedacos[:3]):
-                        if "," in pedaco:
-                            _, b64_limpo = pedaco.split(",", 1)
-                            img_bytes = base64.b64decode(b64_limpo)
-                            img_pil = Image.open(BytesIO(img_bytes)).convert("RGB")
-                            imagens_finais.append(preparar_imagem_vertical(img_pil, idx))
-                            imagens_para_ia.append(img_pil)
+            if "data:image" in dados_fotos_b64:
+                pedacos = dados_fotos_b64.strip().split("|||")
+                for idx, pedaco in enumerate(pedacos[:3]):
+                    if "," in pedaco:
+                        _, b64_limpo = pedaco.split(",", 1)
+                        img_bytes = base64.b64decode(b64_limpo)
+                        img_pil = Image.open(BytesIO(img_bytes)).convert("RGB")
+                        imagens_finais.append(preparar_imagem_vertical(img_pil, idx))
+                        imagens_para_ia.append(img_pil)
 
-                if not imagens_finais:
-                    st.warning("⚠️ Nenhuma imagem carregada. Toque no botão azul acima e selecione suas fotos.")
-                    st.stop()
+            if not imagens_finais:
+                aviso_status.empty()
+                st.warning("⚠️ Nenhuma imagem carregada. Toque no botão azul acima e selecione suas fotos.")
+                st.stop()
 
-            with st.spinner("2/4 A IA está olhando suas fotos e criando o roteiro..."):
+            aviso_status.info("⏳ 2/4 A IA está olhando suas fotos e criando o roteiro...")
