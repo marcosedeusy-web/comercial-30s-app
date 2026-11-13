@@ -9,7 +9,6 @@ import os
 from PIL import Image, ImageOps
 from io import BytesIO
 
-# Correção de compatibilidade do Pillow com MoviePy
 if not hasattr(Image, 'ANTIALIAS'):
     Image.ANTIALIAS = Image.LANCZOS
 
@@ -31,16 +30,17 @@ st.markdown("""
     </style>
 """, unsafe_allow_html=True)
 
-st.title("🎬 Comercial 30s AI v7")
-st.caption("Transforme qualquer link de produto em um anúncio vertical pronto para vender.")
+st.title("🎬 Comercial 30s AI v8")
+st.caption("Transforme qualquer produto em um anúncio vertical pronto para vender.")
 
 with st.expander("🔑 Configuração Inicial (Chave Gratuita)", expanded=True):
     api_key = st.text_input("Cole sua Chave Gratuita do Google Gemini:", type="password")
 
 url_produto = st.text_input("🔗 Cole o Link do Produto (Shopee, Mercado Livre, etc.):")
+nome_produto = st.text_input("📦 Nome ou Detalhes do Produto (Ex: Relógio Smart à prova d'água por R$ 89):")
 
 fotos_manuais = st.file_uploader(
-    "📸 Plano B: Suba fotos da galeria (Recomendado para Shopee/Mercado Livre)", 
+    "📸 Suba fotos da galeria (Recomendado para Shopee/Mercado Livre)", 
     type=["jpg", "jpeg", "png", "webp"], 
     accept_multiple_files=True
 )
@@ -58,8 +58,28 @@ with col2:
         "Curiosidade e Novidade"
     ])
 
+def corrigir_pronuncia(texto):
+    # Corrige a fala de palavras em inglês para o locutor em português falar natural
+    ajustes = {
+        "Shopee": "Chopi",
+        "shopee": "Chopi",
+        "SHOPEE": "Chopi",
+        "TikTok": "Tique Toque",
+        "tiktok": "Tique Toque",
+        "Smartwatch": "Ismárt Uótchi",
+        "smartwatch": "ismárt uótchi",
+        "Bluetooth": "Blutúfi",
+        "bluetooth": "blutúfi",
+        "Free": "Grátis"
+    }
+    texto_falado = texto
+    for palavra, pronuncia in ajustes.items():
+        texto_falado = texto_falado.replace(palavra, pronuncia)
+    return texto_falado
+
 async def gerar_audio(texto, voz, arquivo_saida):
-    comunicador = edge_tts.Communicate(texto, voz, rate="+5%")
+    texto_para_falar = corrigir_pronuncia(texto)
+    comunicador = edge_tts.Communicate(texto_para_falar, voz, rate="+5%")
     await comunicador.save(arquivo_saida)
 
 def preparar_imagem_vertical(img_pil, index):
@@ -137,7 +157,7 @@ if st.button("🚀 GERAR COMERCIAL DE 30 SEGUNDOS", use_container_width=True):
                         resp = requests.get(f"https://jina.ai{link_sem_http}", timeout=20)
                         texto_produto = resp.text[:4000]
                     except:
-                        texto_produto = f"Produto da loja {link_sem_http}"
+                        texto_produto = ""
                 
                 if fotos_manuais:
                     for idx, arquivo in enumerate(fotos_manuais[:5]):
@@ -147,18 +167,20 @@ if st.button("🚀 GERAR COMERCIAL DE 30 SEGUNDOS", use_container_width=True):
                     imagens_finais = baixar_imagens_do_link(texto_produto)
 
                 if not imagens_finais:
-                    st.warning("🔒 A Shopee bloqueou o download automático das fotos. Suba 2 ou 3 prints do produto no botão 'Plano B' logo acima e clique em Gerar novamente!")
+                    st.warning("🔒 Esse site bloqueou o download automático das fotos. Suba 2 ou 3 prints do produto no botão logo acima e clique em Gerar novamente!")
                     st.stop()
 
             with st.spinner("2/4 Criando roteiro persuasivo de 30 segundos..."):
+                info_final = f"Nome/Detalhes informados: {nome_produto}. Dados extras do link: {texto_produto}"
                 prompt = f"""
                 Crie um roteiro de locução comercial de EXATAMENTE 30 segundos (entre 68 e 78 palavras) 
                 com foco em: {estilo_texto}.
-                Escreva APENAS o texto que será falado em voz alta pelo locutor. 
+                Fale diretamente sobre o produto específico informado abaixo, destacando seus benefícios.
+                Escreva APENAS o texto que será falado em voz alta pelo locutor em português do Brasil. 
                 Não coloque títulos, não coloque indicações de cena, não use asteriscos e não use emojis.
                 
-                Informações do produto:
-                {texto_produto if texto_produto else "Produto incrível em oferta especial mostrado nas imagens."}
+                Produto:
+                {info_final}
                 """
                 roteiro = gerar_roteiro_seguro(api_key, prompt)
                 st.success("✍️ Roteiro de Vendas Criado:")
