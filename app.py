@@ -1,4 +1,4 @@
- import streamlit as st
+import streamlit as st
 import requests
 import re
 import google.generativeai as genai
@@ -106,7 +106,7 @@ if st.button("🚀 GERAR COMERCIAL DE 30 SEGUNDOS", use_container_width=True):
                     except:
                         link_final = link_limpo
 
-                    link_sem_param = link_final.partition("?")[0].replace("https://", "").replace("http://", "")
+                    link_sem_param = link_final.partition("?").replace("https://", "").replace("http://", "")
                     
                     try:
                         resp = requests.get(f"https://jina.ai{link_sem_param}", timeout=20)
@@ -142,7 +142,7 @@ if st.button("🚀 GERAR COMERCIAL DE 30 SEGUNDOS", use_container_width=True):
                 st.info(roteiro)
 
             with st.spinner("3/4 Gravando locução comercial..."):
-                voz_id = voz_escolhida.partition(" ")[0]
+                voz_id = voz_escolhida.partition(" ")
                 asyncio.run(gerar_audio(roteiro, voz_id, "locucao.mp3"))
 
             with st.spinner("4/4 Renderizando vídeo MP4 para celular..."):
