@@ -30,7 +30,7 @@ st.markdown("""
     </style>
 """, unsafe_allow_html=True)
 
-st.title("🎬 Comercial 30s AI v22")
+st.title("🎬 Comercial 30s AI v23")
 st.caption("Cole o link e suba as fotos do produto para criar seu anúncio vertical.")
 
 chave_cofre = ""
@@ -86,6 +86,14 @@ async def gerar_audio(texto, voz, energia, arquivo_saida):
         comunicador = edge_tts.Communicate(texto_para_falar, voz)
         await comunicador.save(arquivo_saida)
 
+def otimizar_foto_celular(img_pil):
+    # Corrige rotação do celular e reduz prints gigantes para não estourar a memória
+    img_corrigida = ImageOps.exif_transpose(img_pil)
+    if img_corrigida.mode != "RGB":
+        img_corrigida = img_corrigida.convert("RGB")
+    img_corrigida.thumbnail((1080, 1080))
+    return img_corrigida
+
 def preparar_imagem_vertical(img_pil, index):
     largura_alvo, altura_alvo = 720, 1280
     fundo = Image.new("RGB", (largura_alvo, altura_alvo), (18, 18, 24))
@@ -94,7 +102,7 @@ def preparar_imagem_vertical(img_pil, index):
     pos_y = (altura_alvo - img_ajustada.height) // 2
     fundo.paste(img_ajustada, (pos_x, pos_y))
     caminho = f"frame_{index}.jpg"
-    fundo.save(caminho, quality=95)
+    fundo.save(caminho, quality=90)
     return caminho
 
 def baixar_imagens_do_link(texto_markdown):
@@ -107,8 +115,8 @@ def baixar_imagens_do_link(texto_markdown):
             break
         try:
             resp = requests.get(img_url, headers=headers, timeout=6)
-            img = Image.open(BytesIO(resp.content)).convert("RGB")
-            if img.width >= 300 and img.height >= 300:
+            img = otimizar_foto_celular(Image.open(BytesIO(resp.content)))
+            if img.width >= 250 and img.height >= 250:
                 caminho = preparar_imagem_vertical(img, i)
                 imagens_salvas.append(caminho)
                 imagens_pil.append(img)
@@ -166,9 +174,10 @@ if st.button("🔥 GERAR COMERCIAL ANIMADO AGORA", use_container_width=True):
 
                 if fotos_manuais:
                     for idx, arquivo in enumerate(fotos_manuais[:5]):
-                        img = Image.open(arquivo).convert("RGB")
-                        imagens_finais.append(preparar_imagem_vertical(img, idx))
-                        imagens_para_ia.append(img)
+                        img_bruta = Image.open(arquivo)
+                        img_leve = otimizar_foto_celular(img_bruta)
+                        imagens_finais.append(preparar_imagem_vertical(img_leve, idx))
+                        imagens_para_ia.append(img_leve)
                 elif url_produto:
                     imagens_finais, imagens_para_ia = baixar_imagens_do_link(texto_produto)
 
