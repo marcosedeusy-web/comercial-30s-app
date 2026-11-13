@@ -29,18 +29,10 @@ st.markdown("""
     </style>
 """, unsafe_allow_html=True)
 
-st.title("🎬 Comercial 30s AI v17")
-st.caption("Cole o link ou suba as fotos do produto para criar seu anúncio vertical animado.")
+st.title("🎬 Comercial 30s AI v19")
+st.caption("Suba as fotos ou cole o link do produto para criar seu anúncio vertical.")
 
-# Lê a chave do cofre seguro do Streamlit ou da caixa de texto
-chave_cofre = st.secrets.get("GEMINI_API_KEY", "")
-
-if chave_cofre:
-    api_key = chave_cofre
-    st.success("🔑 Chave API conectada com segurança!")
-else:
-    with st.expander("🔑 Chave API do Google Gemini", expanded=True):
-        api_key = st.text_input("Cole sua Chave API:", type="password")
+api_key = st.secrets.get("GEMINI_API_KEY", "")
 
 url_produto = st.text_input("🔗 Cole o Link do Produto (Opcional):")
 nome_produto = st.text_input("📦 Nome ou Oferta do Produto (Opcional):")
@@ -121,7 +113,7 @@ def gerar_roteiro_com_visao(api_key, prompt, lista_imagens_pil):
 
 if st.button("🔥 GERAR COMERCIAL ANIMADO AGORA", use_container_width=True):
     if not api_key:
-        st.error("⚠️ Cole sua chave do Google Gemini acima ou salve nos Secrets do Streamlit.")
+        st.error("⚠️ Falta salvar sua Chave API nos Secrets do Streamlit!")
     elif not url_produto and not fotos_manuais:
         st.error("⚠️ Cole o link de um produto ou envie pelo menos uma foto!")
     else:
