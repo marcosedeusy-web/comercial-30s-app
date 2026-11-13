@@ -5,7 +5,6 @@ import time
 import google.generativeai as genai
 import edge_tts
 import asyncio
-import os
 from PIL import Image, ImageOps
 from io import BytesIO
 
@@ -30,17 +29,21 @@ st.markdown("""
     </style>
 """, unsafe_allow_html=True)
 
-st.title("🎬 Comercial 30s AI v16")
+st.title("🎬 Comercial 30s AI v17")
 st.caption("Cole o link ou suba as fotos do produto para criar seu anúncio vertical animado.")
 
-# Sua chave nova já vem preenchida automaticamente aqui
-chave_padrao = "AQ.Ab8RN6IdeHIiVOzpnUV9rJbUE" + "roFFCqqA8x0rHmxUxl6N4yOyA"
+# Lê a chave do cofre seguro do Streamlit ou da caixa de texto
+chave_cofre = st.secrets.get("GEMINI_API_KEY", "")
 
-with st.expander("🔑 Chave API do Google Gemini (Já Preenchida)", expanded=False):
-    api_key = st.text_input("Sua Chave API:", value=chave_padrao, type="password")
+if chave_cofre:
+    api_key = chave_cofre
+    st.success("🔑 Chave API conectada com segurança!")
+else:
+    with st.expander("🔑 Chave API do Google Gemini", expanded=True):
+        api_key = st.text_input("Cole sua Chave API:", type="password")
 
-url_produto = st.text_input("🔗 Cole o Link do Produto (Opcional - Shopee, Mercado Livre, etc.):")
-nome_produto = st.text_input("📦 Nome ou Oferta do Produto (Opcional - a IA já lê suas fotos!):")
+url_produto = st.text_input("🔗 Cole o Link do Produto (Opcional):")
+nome_produto = st.text_input("📦 Nome ou Oferta do Produto (Opcional):")
 
 fotos_manuais = st.file_uploader("📸 Suba de 2 a 5 fotos ou prints do produto:", type=["jpg", "jpeg", "png", "webp"], accept_multiple_files=True)
 
@@ -118,7 +121,7 @@ def gerar_roteiro_com_visao(api_key, prompt, lista_imagens_pil):
 
 if st.button("🔥 GERAR COMERCIAL ANIMADO AGORA", use_container_width=True):
     if not api_key:
-        st.error("⚠️ Cole sua chave do Google Gemini acima.")
+        st.error("⚠️ Cole sua chave do Google Gemini acima ou salve nos Secrets do Streamlit.")
     elif not url_produto and not fotos_manuais:
         st.error("⚠️ Cole o link de um produto ou envie pelo menos uma foto!")
     else:
